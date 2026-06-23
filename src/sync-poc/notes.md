@@ -42,3 +42,12 @@ During each cron iteration, our inbound processor would query the external data 
 ## Outbound Cycle Diagram
 
 ![Outbound-Cycle](./img/outbound-cycle.png)
+
+### Git Workflow Note
+* Commit Strategy: You will notice the implementation is captured in a singular monolithic commit on the feature branch. During the initial PoC phase, I focused on local prototyping, testing dependency interactions (BullMQ, NestJS modules, TypeORM entities), and stabilizing the runtime environment under a continuous local feedback loop.
+
+* Production Preference: In a collaborative production environment, I strictly follow micro-commits mapping to atomic structural changes (e.g., separate commits for entity configuration, service layer migrations, module wiring, and spec suites) to ensure clean peer review cycles and precise rollbacks.
+
+### AI Chat used:
+Since I don't use nor have a IDE with AI I use the gemini web chat.
+[Link to chat](https://share.gemini.google/hEeAai4tRovz)
