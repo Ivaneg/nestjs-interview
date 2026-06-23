@@ -4,17 +4,25 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Put,
+  HttpStatus,
+  HttpCode,
 } from '@nestjs/common';
 import { CreateTodoListDto } from './dtos/create-todo_list';
 import { UpdateTodoListDto } from './dtos/update-todo_list';
 import { TodoList } from '../interfaces/todo_list.interface';
 import { TodoListsService } from './todo_lists.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Controller('api/todolists')
 export class TodoListsController {
-  constructor(private todoListsService: TodoListsService) {}
+  constructor(
+    private todoListsService: TodoListsService,
+    @InjectQueue('bulk-operations') private readonly bulkQueue: Queue,
+  ) {}
 
   @Get()
   index(): Promise<TodoList[]> {
@@ -22,8 +30,10 @@ export class TodoListsController {
   }
 
   @Get('/:todoListId')
-  show(@Param() param: { todoListId: number }): Promise<TodoList | null> {
-    return this.todoListsService.get(param.todoListId);
+  show(
+    @Param('todoListId', ParseIntPipe) todoListId: number,
+  ): Promise<TodoList | null> {
+    return this.todoListsService.get(todoListId);
   }
 
   @Post()
@@ -33,14 +43,28 @@ export class TodoListsController {
 
   @Put('/:todoListId')
   update(
-    @Param() param: { todoListId: string },
+    @Param('todoListId', ParseIntPipe) todoListId: number,
     @Body() dto: UpdateTodoListDto,
   ): Promise<TodoList> {
-    return this.todoListsService.update(Number(param.todoListId), dto);
+    return this.todoListsService.update(todoListId, dto);
   }
 
   @Delete('/:todoListId')
-  delete(@Param() param: { todoListId: number }): Promise<void> {
-    return this.todoListsService.delete(param.todoListId);
+  delete(@Param('todoListId', ParseIntPipe) todoListId: number): Promise<void> {
+    return this.todoListsService.delete(todoListId);
+  }
+
+  @Post(':id/complete-all')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async completeAllItems(@Param('id', ParseIntPipe) id: number) {
+    await this.bulkQueue.add(
+      'complete-all-items',
+      { todoListId: id },
+      {
+        removeOnComplete: true,
+        attempts: 3,
+      },
+    );
+    return { success: true, message: 'Task queued successfully' };
   }
 }
